@@ -1,0 +1,28 @@
+version: '3.8'
+services:
+  server:
+    image: coffee_shop
+    container_name: coffee_shop
+    environment:
+      DB_HOST: coffee_db
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres
+    container_name: coffee_db
+    restart: always
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: coffee_shop
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD:
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 3s
+      timeout: 3s
+      retries: 5

@@ -1,0 +1,37 @@
+memberships:
+
+  basic:
+    quotas:
+      cappuccino:
+        amount: 1
+        retention: 24
+      espresso:
+        amount: 2
+        retention: 24
+      americano:
+        amount: 3
+        retention: 24
+
+  coffee_lover:
+    quotas:
+      cappuccino:
+        amount: 5
+        retention: 24
+      espresso:
+        amount: 5
+        retention: 24
+      americano:
+        amount: 5
+        retention: 24
+
+  americano_maniac:
+    quotas:
+      cappuccino:
+        amount: 1
+        retention: 24
+      espresso:
+        amount: 2
+        retention: 24
+      americano:
+        amount: 5
+        retention: 1

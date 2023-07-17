@@ -1,0 +1,1 @@
+CREATE SCHEMA coffee_shop;
