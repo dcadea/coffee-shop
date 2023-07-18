@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"log"
 )
 
@@ -14,11 +14,11 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	db, err := gorm.Open("postgres", fmt.Sprintf("host=%s port=5432 user=postgres dbname=coffee_shop sslmode=disable", getDBHost()))
+	dsn := fmt.Sprintf("host=%s port=5432 user=postgres dbname=coffee_shop sslmode=disable", getDBHost())
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to the database: %v", err)
 	}
-	defer db.Close()
 
 	db.AutoMigrate(&QuotaUsage{})
 
