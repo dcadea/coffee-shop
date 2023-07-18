@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"time"
@@ -41,12 +41,18 @@ func (cs *CoffeeShop) handleBuyCoffee(c *gin.Context) {
 		return
 	}
 
+	if err := cs.lockUserQuotasUsage(userID, coffeeType); err != nil {
+		c.JSON(http.StatusInternalServerError, map[string]any{"error": "Failed to process the request"})
+		return
+	}
+
 	usage := QuotaUsage{
 		UserID:    userID,
 		Coffee:    coffeeType,
 		Timestamp: currentTime,
 	}
 	cs.DB.Create(&usage)
+	cs.unlockUserQuotasUsage(userID, coffeeType)
 
 	c.Status(http.StatusOK)
 	c.JSON(http.StatusOK, map[string]any{"message": fmt.Sprintf("Enjoy your '%s'", coffeeType)})
@@ -56,10 +62,10 @@ func (cs *CoffeeShop) checkQuotaLimits(quota Quota, userID uint, coffeeType stri
 	currentTime := time.Now()
 	timeThreshold := currentTime.Add(-time.Duration(quota.Retention) * time.Hour)
 
-	var count int
+	var count int64
 	cs.DB.Model(&QuotaUsage{}).Where("user_id = ? AND coffee = ? AND timestamp > ?", userID, coffeeType, timeThreshold).Count(&count)
 
-	if count >= quota.Amount {
+	if count >= int64(quota.Amount) {
 		var waitTime time.Duration
 		if lastUsage, err := cs.getLastQuotaUsage(userID, coffeeType); err == nil {
 			waitTime = lastUsage.Timestamp.Add(time.Duration(quota.Retention) * time.Hour).Sub(currentTime)
@@ -78,4 +84,18 @@ func (cs *CoffeeShop) getLastQuotaUsage(userID uint, coffeeType string) (QuotaUs
 		return usage, err
 	}
 	return usage, nil
+}
+
+func (cs *CoffeeShop) lockUserQuotasUsage(userID uint, coffeeType string) error {
+	query := fmt.Sprintf("SELECT pg_advisory_lock(hashtext('%d'), hashtext('%s'))", userID, coffeeType)
+	result := cs.DB.Exec(query)
+	if result.Error != nil || result.RowsAffected != 1 {
+		return fmt.Errorf("failed to acquire lock")
+	}
+	return nil
+}
+
+func (cs *CoffeeShop) unlockUserQuotasUsage(userID uint, coffeeType string) {
+	query := fmt.Sprintf("SELECT pg_advisory_unlock(hashtext('%d'), hashtext('%s'))", userID, coffeeType)
+	_ = cs.DB.Exec(query)
 }
